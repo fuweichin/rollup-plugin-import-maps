@@ -21,7 +21,7 @@ export default {
   input: './src/index.js',
   plugins: [
     importMapsPlugin({
-      srcObject: process.env.ROLLUP_WATCH ? : readFileSync('./index-dev.importmap') : readFileSync('./index-cdn.importmap')
+      srcObject: process.env.ROLLUP_WATCH ? readFileSync('./index-dev.importmap') : readFileSync('./index-cdn.importmap')
     })
   ],
   output: {
@@ -61,7 +61,7 @@ and index-cdn.importmap
 }
 ```
 
-4. Input file './src/index.js'
+4. input code './src/index.js'
 
 ```js
 import Vue from 'vue';
@@ -78,7 +78,7 @@ rollup -c rollup.config.js -w
 rollup -c rollup.config.js
 ```
 
-6. Output code './dist/index.js'
+6. output code './dist/index.js'
 
 ```js
 import Vue from '/node_modules/vue/dist/vue.esm.browser.min.js';
