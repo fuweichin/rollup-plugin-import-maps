@@ -1,0 +1,45 @@
+{
+  "name": "rollup-plugin-import-maps",
+  "version": "0.1.0",
+  "description": "A plugin to resolve ECMAScript module bare import specifiers at build-time",
+  "keywords": [
+    "rollup-plugin",
+    "import-maps"
+  ],
+  "author": "Fuwei Chin",
+  "license": "MIT",
+  "main": "dist/index.cjs",
+  "type": "module",
+  "types": "src/index.d.ts",
+  "exports": {
+    "import": "./src/index.mjs",
+    "require": "./dist/index.cjs"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "files": [
+    "src",
+    "dist",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fuweichin/rollup-plugin-import-maps"
+  },
+  "scripts": {
+    "build": "rollup -c rollup.config.js",
+    "watch": "rollup -c rollup.config.js -w"
+  },
+  "dependencies": {
+    "import-maps": "^0.2.4",
+    "schema-utils": "^4.0.0"
+  },
+  "peerDependencies": {
+    "rollup": ">=2.0"
+  },
+  "devDependencies": {
+    "acorn-import-assertions": "^1.8.0",
+    "rollup-plugin-import-assert": "^2.1.0"
+  }
+}
