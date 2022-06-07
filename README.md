@@ -1,6 +1,25 @@
 # rollup-plugin-import-maps
 
-A plugin to resolve ECMAScript module bare import specifiers at build-time for browsers which don't support import-maps, mostly based on **WICG's [import-maps reference implementation](https://github.com/WICG/import-maps/tree/master/reference-implementation)**.
+A plugin to resolve ECMAScript module bare/url import specifiers at build-time for browsers which don't support import-maps, mostly based on **WICG's [import-maps reference implementation](https://github.com/WICG/import-maps/tree/master/reference-implementation)**.
+
+**Contents:**
+
+<!--ts-->
+
+   * [Install](#install)
+   * [Usage](#usage)
+      * [Basic Usage](#basic-usage)
+      * [Plugin Options](#plugin-options)
+      * [Caveats](#caveats)
+      * [Use Cases](#use-cases)
+         * [Bare Specifiers Transforming](#bare-specifiers-transforming)
+         * [URL Specifiers Transforming](#url-specifiers-transforming)
+         * [As a Transitional Polyfill](#as-a-transitional-polyfill)
+   * [Related Efforts](#related-efforts)
+   * [Maintainers](#maintainers)
+   * [License](#license)
+<!--te-->
+
 
 
 ## Install
@@ -9,92 +28,37 @@ A plugin to resolve ECMAScript module bare import specifiers at build-time for b
 npm install --save-dev rollup-plugin-import-maps
 ```
 
+
+
 ## Usage
 
-1. edit rollup.config.js, import and use the plugin
+### Basic Usage
+
+edit rollup.config.js, import and use the plugin
 
 ```js
 import { importMapsPlugin } from 'rollup-plugin-import-maps';
-import { readFileSync } from 'fs';
+// import { readFileSync } from 'fs';
 
 export default {
   input: './src/index.js',
   plugins: [
     importMapsPlugin({
-      srcObject: process.env.ROLLUP_WATCH ? readFileSync('./index-dev.importmap') : readFileSync('./index-cdn.importmap')
-    })
+      srcPath: './index.importmap',
+      // srcText: readFileSync('./index.importmap', { encoding: 'utf8' }),
+      // srcObject: JSON.parse(readFileSync('./index.importmap', { encoding: 'utf8' })),
+    }),
   ],
-  output: {
-    file: './dist/index.js',
-    format: 'es'
-  }
+  output: [
+    {
+      file: './dist/index.js',
+      format: 'es'
+    }
+  ]
 };
 ```
 
-2. install some esm-ready packages, for example:
 
-```sh
-npm install vue@2.x underscore@1.x
-```
-
-3. create importmap files like index-dev.importmap
-
-```json
-{
-  "imports": {
-    "vue": "/node_modules/vue/dist/vue.esm.browser.min.js",
-    "underscore/": "/node_modules/underscore/",
-    "@/polyfills/": "/lib/polyfills/"
-  }
-}
-```
-
-and index-cdn.importmap
-
-```json
-{
-  "imports": {
-    "vue": "https://unpkg.com/vue@2.x/dist/vue.esm.browser.min.js",
-    "underscore/": "https://unpkg.com/underscore@1.x/",
-    "@/polyfills/": "/lib/polyfills/"
-  }
-}
-```
-
-4. input code './src/index.js'
-
-```js
-import Vue from 'vue';
-import shuffle from 'underscore/modules/shuffle.js';
-import '@/polyfills/navigator.userAgentData.js';
-// ...
-```
-
-5. use rollup to watch or build
-
-```sh
-rollup -c rollup.config.js -w
-# or
-rollup -c rollup.config.js
-```
-
-6. output code './dist/index.js'
-
-```js
-import Vue from '/node_modules/vue/dist/vue.esm.browser.min.js';
-import shuffle from '/node_modules/underscore/modules/shuffle.js';
-import '/lib/polyfills/navigator.userAgentData.js';
-// ...
-```
-
-or
-
-```js
-import Vue from 'https://unpkg.com/vue@2.x/dist/vue.esm.browser.min.js';
-import shuffle from 'https://unpkg.com/underscore@1.x/modules/shuffle.js';
-import '/lib/polyfills/navigator.userAgentData.js';
-// ...
-```
 
 ### Plugin Options
 
@@ -102,15 +66,211 @@ import '/lib/polyfills/navigator.userAgentData.js';
 
   file path to importmap
 
-+ `srcObject`:Buffer|ArrayBuffer|Object optional
++ `srcText`:string optional
 
-  raw buffer of importmap
-  
+  plain text of importmap
+
++ `srcObject`:Object optional
+
+  parsed object of importmap
+
+  **Note:** One of `srcObject`, `srcText`, `srcPath` should be specified, if multiple of them specified, then precedence order is: srcObject, srcText, srcPath.
+
 + `baseDir`: string default `process.cwd()`
 
   baseDir to calculate scope paths in order to match scopes defined in importmap
 
-**Note:** either srcPath or srcObject should be specified
++ `transformingReport`:string default `undefined`
+
+  set a file path to save transforming report as a JSON file,  will output to Console if value set to `"-"`
+
++ `noTransform`:boolean default `false`
+
+  if value set to `true`, then the plugin will mark specifiers defined in importmap as external, and won't transform those specifiers. useful if you want to  build for browsers which already support import-maps and "set external list" with importmap. 
+  
++ `exclude`:string|RegExp|Function default `undefined`
+
+  skip bare/url specifiers from resolving / transforming according to importmap.
+
+  e.g. `/\.(json|wasm|css)$/`, `(source, importer)=> /\.(json|wasm|css)$/.test(source)`, `.css,.wasm,.json`
+
+
+
+### Caveats
+
++ This plugin doesn't yet support transform of module specifiers defined in data url. example data url:
+  ```js
+  import {foo, bar} from "data:application/javascript;charset=utf-8,import%20%7Bdefault%20as%20foo%7D%20from%20'foo'%3B%0Aexport%20%7Bfoo%7D%3B%0Aexport%20%7Bdefault%20as%20bar%7D%20from%20'bar'%3B";
+  ```
+
+  which can be decoded as
+
+  ```js
+  import {default as foo} from 'foo';
+  export {foo};
+  export {default as bar} from 'bar';
+  ```
+
++ When tansforming specifiers in [dynamic imports](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#dynamic_imports), only string literal can be transformed. examples code:
+
+  ```js
+  import('foo/locales/en/messages.js') // Yes
+  import("foo/locales/en/messages.js") // Yes
+  
+  let lang = 'en';
+  import('foo/locales/'+lang+'/messages.js') // No
+  
+  let modulePath = 'foo/locales/en/messages.js'
+  import(modulePath)                         // No
+  
+  import(`foo/locales/en/messages.js`)       // No
+  ```
+
+
+
+### Use Cases
+
+#### Bare Specifiers Transforming
+
+importmap
+
+```json5
+{
+  "imports": {
+    "three": "/node_modules/three/build/three.module.js",
+    "three/": "/node_modules/three/",
+    "underscore": "data:application/javascript;charset=utf-8,export%20default%20window._%3B",
+    "~/": "//mysite.com/packages/myapp/"
+  }
+}
+```
+
+input code
+
+```js
+import * as THREE from 'three';
+import GLTFLoader from 'three/examples/jsm/loaders/GLTFLoader.js';
+import underscore from 'underscore';
+import '~/polyfills/navigator.userAgentData.js';
+// ...
+```
+
+output code
+
+```js
+import Vue from "/node_modules/vue/dist/vue.esm.browser.min.js";
+import jQuery from "data:application/javascript;charset=utf-8,export%20default%20window.jQuery%3B";
+import shuffle from "/node_modules/underscore/modules/shuffle.js";
+import "//libs.yourcompany.com/polyfills/latest/navigator.userAgentData.js";
+// ...
+```
+
+#### URL Specifiers Transforming
+
+importmap
+
+```json
+{
+  "imports": {
+    "https://unpkg.com/three@0.141.0/build/three.module.js": "/node_modules/three/build/three.module.js",
+    "node-modules:/": "/node_modules/",
+    "data:application/javascript;charset=utf-8,export%20default%20window._%3B": "/underscore/underscore-esm-min.js",
+    "app-home:/": "//mysite.com/packages/myapp/"
+  }
+}
+```
+
+input code
+
+```js
+import * as THREE from 'https://unpkg.com/three@0.141.0/build/three.module.js';
+import GLTFLoader from 'node-modules:/three/examples/jsm/loaders/GLTFLoader.js';
+import underscore from 'data:application/javascript;charset=utf-8,export%20default%20window._%3B';
+import 'app-home:/polyfills/navigator.userAgentData.js';
+// ...
+```
+
+output code
+
+```js
+import * as THREE from '/node_modules/three/build/three.module.js';
+import GLTFLoader from '/node_modules/three/examples/jsm/loaders/GLTFLoader.js';
+import underscore from '/underscore/underscore-esm-min.js';
+import '//mysite.com/packages/myapp/polyfills/navigator.userAgentData.js';
+// ...
+```
+
+#### As a Transitional Polyfill
+
+This plugin plays a role of polyfill for browsers but is used at build-time rather than at run-time. If some day (maybe in 2023) all major browsers support import-maps then this plugin can be retired.
+
+You may use rollup to build two distributions, for browsers with or without import-maps support, and load corresponding distribution conditionally. e.g.
+
+```js
+// rollup.config.js
+export default [
+  {
+    input: './src/index.js',
+    plugins: [
+      importMapsPlugin({
+        srcPath: './index.importmap',
+        transformingReport: '-',
+      }),
+    ],
+    output: [
+      {
+        file: './dist/index.js',
+        format: 'es'
+      }
+    ]
+  },
+  {
+    input: './src/index.js',
+    plugins: [
+      importMapsPlugin({
+        srcPath: './index.importmap',
+        noTransforming: true,
+      }),
+    ],
+    output: [
+      {
+        file: './dist/index-experimental.js',
+        format: 'es'
+      }
+    ]
+  }
+];
+```
+
+```html
+<script type="importmap">
+put content of ./index.importmap here
+</script>
+
+<script type="module">
+if (HTMLScriptElement.supports && HTMLScriptElement.supports('importmap')) {
+  console.log('Your browser supports import maps.');
+  import('/dist/index-experimental.js');
+}else{
+  console.log('Your browser doesn\'t support import maps.');
+  import('/dist/index.js');
+}
+</script>
+```
+
+
+
+## Related Efforts
+
++ [import-maps](#) - Reference implementation playground for import maps proposal
+
+
+
+## Maintainers
+
+[@fuweichin](https://github.com/fuweichin)
+
+
 
 
 ## License
@@ -120,3 +280,4 @@ import '/lib/polyfills/navigator.userAgentData.js';
 Other licenses of dependencies
 
 + import-maps: [W3C Software and Document License](http://www.w3.org/Consortium/Legal/2015/copyright-software-and-document) and [W3C CLA](https://www.w3.org/community/about/agreements/cla/)
+
