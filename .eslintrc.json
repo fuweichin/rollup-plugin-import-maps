@@ -1,0 +1,17 @@
+{
+  "env": {
+    "node": true
+  },
+  "ignorePatterns": [
+    "dist/**/*.cjs",
+    "spec/fixtures/**/out.js"
+  ],
+  "overrides": [
+    {
+      "files": ["spec/**/*.mjs"],
+      "env": {
+        "jasmine": true
+      }
+    }
+  ]
+}
