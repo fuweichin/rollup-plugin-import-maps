@@ -2,10 +2,11 @@
 
 A plugin to resolve ECMAScript module bare/url import specifiers at build-time for browsers which don't support import-maps, mostly based on **WICG's [import-maps reference implementation](https://github.com/WICG/import-maps/tree/master/reference-implementation)**.
 
+This plugin plays a role of polyfill for browsers but is used at build-time rather than at run-time. If some day (maybe in 2023) all major browsers support import-maps then this plugin can be retired.
+
 **Contents:**
 
 <!--ts-->
-
    * [Install](#install)
    * [Usage](#usage)
       * [Basic Usage](#basic-usage)
@@ -14,7 +15,7 @@ A plugin to resolve ECMAScript module bare/url import specifiers at build-time f
       * [Use Cases](#use-cases)
          * [Bare Specifiers Transforming](#bare-specifiers-transforming)
          * [URL Specifiers Transforming](#url-specifiers-transforming)
-         * [As a Transitional Polyfill](#as-a-transitional-polyfill)
+         * [No Transforming](#no-transforming)
    * [Related Efforts](#related-efforts)
    * [Maintainers](#maintainers)
    * [License](#license)
@@ -92,13 +93,13 @@ export default {
 
   skip bare/url specifiers from resolving / transforming according to importmap.
 
-  e.g. `/\.(json|wasm|css)$/`, `(source, importer)=> /\.(json|wasm|css)$/.test(source)`, `.css,.wasm,.json`
+  e.g. `/\.(json|wasm|css)$/`, `(source, importer)=> /\.(json|wasm|css)$/.test(source)`, `.json,.css,.wasm`
 
 
 
 ### Caveats
 
-+ This plugin doesn't yet support transform of module specifiers defined in data url. example data url:
++ This plugin doesn't yet support transforming module specifiers defined in data url. example data url:
   ```js
   import {foo, bar} from "data:application/javascript;charset=utf-8,import%20%7Bdefault%20as%20foo%7D%20from%20'foo'%3B%0Aexport%20%7Bfoo%7D%3B%0Aexport%20%7Bdefault%20as%20bar%7D%20from%20'bar'%3B";
   ```
@@ -111,7 +112,7 @@ export default {
   export {default as bar} from 'bar';
   ```
 
-+ When tansforming specifiers in [dynamic imports](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#dynamic_imports), only string literal can be transformed. examples code:
++ When tansforming specifiers in [dynamic imports](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#dynamic_imports), only string literal can be transformed. example specifiers:
 
   ```js
   import('foo/locales/en/messages.js') // Yes
@@ -150,19 +151,23 @@ input code
 ```js
 import * as THREE from 'three';
 import GLTFLoader from 'three/examples/jsm/loaders/GLTFLoader.js';
-import underscore from 'underscore';
+import _ from 'underscore';
 import '~/polyfills/navigator.userAgentData.js';
-// ...
+
+console.log(THREE, GLTFLoader, _);
+
 ```
 
 output code
 
 ```js
-import Vue from "/node_modules/vue/dist/vue.esm.browser.min.js";
-import jQuery from "data:application/javascript;charset=utf-8,export%20default%20window.jQuery%3B";
-import shuffle from "/node_modules/underscore/modules/shuffle.js";
-import "//libs.yourcompany.com/polyfills/latest/navigator.userAgentData.js";
-// ...
+import * as THREE from '/node_modules/three/build/three.module.js';
+import GLTFLoader from '/node_modules/three/examples/jsm/loaders/GLTFLoader.js';
+import _ from 'data:application/javascript;charset=utf-8,export%20default%20window._%3B';
+import '//mysite.com/packages/myapp/polyfills/navigator.userAgentData.js';
+
+console.log(THREE, GLTFLoader, _);
+
 ```
 
 #### URL Specifiers Transforming
@@ -185,9 +190,11 @@ input code
 ```js
 import * as THREE from 'https://unpkg.com/three@0.141.0/build/three.module.js';
 import GLTFLoader from 'node-modules:/three/examples/jsm/loaders/GLTFLoader.js';
-import underscore from 'data:application/javascript;charset=utf-8,export%20default%20window._%3B';
+import _ from 'data:application/javascript;charset=utf-8,export%20default%20window._%3B';
 import 'app-home:/polyfills/navigator.userAgentData.js';
-// ...
+
+console.log(THREE, GLTFLoader, _);
+
 ```
 
 output code
@@ -195,14 +202,14 @@ output code
 ```js
 import * as THREE from '/node_modules/three/build/three.module.js';
 import GLTFLoader from '/node_modules/three/examples/jsm/loaders/GLTFLoader.js';
-import underscore from '/underscore/underscore-esm-min.js';
+import _ from '/underscore/underscore-esm-min.js';
 import '//mysite.com/packages/myapp/polyfills/navigator.userAgentData.js';
-// ...
+
+console.log(THREE, GLTFLoader, _);
+
 ```
 
-#### As a Transitional Polyfill
-
-This plugin plays a role of polyfill for browsers but is used at build-time rather than at run-time. If some day (maybe in 2023) all major browsers support import-maps then this plugin can be retired.
+#### No Transforming
 
 You may use rollup to build two distributions, for browsers with or without import-maps support, and load corresponding distribution conditionally. e.g.
 
