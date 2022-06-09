@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 + `options.srcText` to use text as importmap source
 + `options.transformingReport` to save transforming report as a file
 + `options.noTransforming` to only mark specifiers defined in importmap as external without transforming
-+ `options.exclude` to skip specifiers from resoving
++ `options.exclude` to skip specifiers from resolving
 
 ### Changed
 

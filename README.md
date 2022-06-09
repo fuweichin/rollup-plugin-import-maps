@@ -85,7 +85,7 @@ export default {
 
   set a file path to save transforming report as a JSON file,  will output to Console if value set to `"-"`
 
-+ `noTransform`:boolean default `false`
++ `noTransforming`:boolean default `false`
 
   if value set to `true`, then the plugin will mark specifiers defined in importmap as external, and won't transform those specifiers. useful if you want to  build for browsers which already support import-maps and "set external list" with importmap. 
   
@@ -93,7 +93,7 @@ export default {
 
   skip bare/url specifiers from resolving / transforming according to importmap.
 
-  e.g. `/\.(json|wasm|css)$/`, `(source, importer)=> /\.(json|wasm|css)$/.test(source)`, `.json,.css,.wasm`
+  e.g. `.json,.wasm,.css`, `/\.(json|wasm|css)$/`, `(source, importer)=> /\.(json|wasm|css)$/.test(source)`
 
 
 
