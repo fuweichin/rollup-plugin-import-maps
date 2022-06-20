@@ -6,11 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 
 
-## [0.2.2] - 2020-06-21
+## [0.2.3] - 2020-06-21
 
 ### Fixed
 
 + Fixed module specifier with leading slash was resolved as filesystem path, now it is changed to be resolved as url pathname and won't be transformed.
++ Fixed resolving of dynamic import specifier which starts with `./` `../` or `/`
 
 
 

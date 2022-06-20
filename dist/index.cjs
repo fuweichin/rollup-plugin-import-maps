@@ -80,6 +80,41 @@ function importMapsPlugin(options) {
     }
     return scriptURL;
   };
+  let sourceRoot;
+
+  function transformImportSpecifier(source, importer) {
+    let scriptURL = getFakeURL(importer);
+    let parsedUrl = importMaps.resolve(source, parsedImportMaps, scriptURL);
+    let newSource;
+    if (parsedUrl.origin === fakeBaseURI) { // e.g. "/path/to/module.js"
+      newSource = parsedUrl.href.slice(fakeBaseURI.length);
+    } else if (parsedUrl.protocol === 'ftp:' && parsedUrl.host !== 'fakedomain') { // e.g. "//example.com/path/to/module.js"
+      newSource = parsedUrl.href.slice('ftp:'.length);
+    } else { // e.g. "https://example.com/path/to/module.js"
+      newSource = parsedUrl.href;
+    }
+    if (newSource === source) {
+      return null;
+    }
+    if (noTransforming) {
+      return {
+        id: source,
+        external: 'absolute'
+      };
+    }
+    if (report) {
+      let pathname = '/' + getScriptPath(importer);
+      let map = report[pathname];
+      if (!map) {
+        map = report[pathname] = {};
+      }
+      map[source] = newSource;
+    }
+    return {
+      id: newSource,
+      external: 'absolute'
+    };
+  }
 
   return {
     name: 'import-maps',
@@ -101,8 +136,30 @@ function importMapsPlugin(options) {
         }
       }
     },
+    resolveDynamicImport(source, importer) {
+      if (!importer) {
+        return null;
+      }
+      if (typeof source === 'string') {
+        if (source.startsWith('./') || source.startsWith('../')) {
+          let sourceSpecifier = './' + path__default["default"].relative(sourceRoot, path__default["default"].resolve(path__default["default"].dirname(importer), source)).replace(/\\/g, '/');
+          return {id: sourceSpecifier, external: 'absolute'};
+        }
+        if (source.startsWith('/')) {
+          return {id: source, external: 'absolute'};
+        }
+        return transformImportSpecifier(source, importer);
+      } else {
+        // skip identifier / expression / template literal
+        return null;
+      }
+    },
     resolveId(source, importer, info) {
-      if (info.isEntry || !importer) {
+      if (info.isEntry) {
+        sourceRoot = path__default["default"].resolve(path__default["default"].dirname(source));
+        return null;
+      }
+      if (!importer) {
         return null;
       }
       if (source.startsWith('./') || source.startsWith('../')) {
@@ -114,37 +171,7 @@ function importMapsPlugin(options) {
       if (exclude && isExcluded(source)) {
         return null;
       }
-      let scriptURL = getFakeURL(importer);
-      let parsedUrl = importMaps.resolve(source, parsedImportMaps, scriptURL);
-      let newSource;
-      if (parsedUrl.origin === fakeBaseURI) { // e.g. "/path/to/module.js"
-        newSource = parsedUrl.href.slice(fakeBaseURI.length);
-      } else if (parsedUrl.protocol === 'ftp:' && parsedUrl.host !== 'fakedomain') { // e.g. "//example.com/path/to/module.js"
-        newSource = parsedUrl.href.slice('ftp:'.length);
-      } else { // e.g. "https://example.com/path/to/module.js"
-        newSource = parsedUrl.href;
-      }
-      if (newSource === source) {
-        return null;
-      }
-      if (noTransforming) {
-        return {
-          id: source,
-          external: 'absolute'
-        };
-      }
-      if (report) {
-        let pathname = '/' + getScriptPath(importer);
-        let map = report[pathname];
-        if (!map) {
-          map = report[pathname] = {};
-        }
-        map[source] = newSource;
-      }
-      return {
-        id: newSource,
-        external: 'absolute'
-      };
+      return transformImportSpecifier(source, importer);
     },
     async buildEnd(err) {
       if (!err && report) {
