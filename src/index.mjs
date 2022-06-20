@@ -9,10 +9,6 @@ import {fileURLToPath} from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const optionsSchema = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../src/options.schema.json'), {encoding: 'utf-8'}));
 
-let isRelativeSpecifier = (str) => {
-  return str.startsWith('./') || str.startsWith('../') || str.startsWith('/');
-};
-
 export function importMapsPlugin(options) {
   validate(optionsSchema, options, {
     name: 'rollup-plugin-import-maps',
@@ -98,8 +94,11 @@ export function importMapsPlugin(options) {
       if (info.isEntry || !importer) {
         return null;
       }
-      if (isRelativeSpecifier(source)) {
+      if (source.startsWith('./') || source.startsWith('../')) {
         return null;
+      }
+      if (source.startsWith('/')) {
+        return {id: source, external: 'absolute'};
       }
       if (exclude && isExcluded(source)) {
         return null;

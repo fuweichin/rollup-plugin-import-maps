@@ -20,10 +20,6 @@ var fsPromises__default = /*#__PURE__*/_interopDefaultLegacy(fsPromises);
 const __dirname$1 = path__default["default"].dirname(url.fileURLToPath((typeof document === 'undefined' ? new (require('u' + 'rl').URL)('file:' + __filename).href : (document.currentScript && document.currentScript.src || new URL('index.cjs', document.baseURI).href))));
 const optionsSchema = JSON.parse(fs__default["default"].readFileSync(path__default["default"].resolve(__dirname$1, '../src/options.schema.json'), {encoding: 'utf-8'}));
 
-let isRelativeSpecifier = (str) => {
-  return str.startsWith('./') || str.startsWith('../') || str.startsWith('/');
-};
-
 function importMapsPlugin(options) {
   schemaUtils.validate(optionsSchema, options, {
     name: 'rollup-plugin-import-maps',
@@ -109,8 +105,11 @@ function importMapsPlugin(options) {
       if (info.isEntry || !importer) {
         return null;
       }
-      if (isRelativeSpecifier(source)) {
+      if (source.startsWith('./') || source.startsWith('../')) {
         return null;
+      }
+      if (source.startsWith('/')) {
+        return {id: source, external: 'absolute'};
       }
       if (exclude && isExcluded(source)) {
         return null;
