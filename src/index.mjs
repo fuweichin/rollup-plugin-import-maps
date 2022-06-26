@@ -83,7 +83,10 @@ export function importMapsPlugin(options) {
       newSource = parsedUrl.href;
     }
     if (newSource === source) {
-      return null;
+      return {
+        id: source,
+        external: 'absolute'
+      };
     }
     if (noTransforming) {
       return {
@@ -134,9 +137,6 @@ export function importMapsPlugin(options) {
           let sourceSpecifier = './' + path.relative(sourceRoot, path.resolve(path.dirname(importer), source)).replace(/\\/g, '/');
           return {id: sourceSpecifier, external: 'absolute'};
         }
-        if (source.startsWith('/')) {
-          return {id: source, external: 'absolute'};
-        }
         return transformImportSpecifier(source, importer);
       } else {
         // skip identifier / expression / template literal
@@ -153,9 +153,6 @@ export function importMapsPlugin(options) {
       }
       if (source.startsWith('./') || source.startsWith('../')) {
         return null;
-      }
-      if (source.startsWith('/')) {
-        return {id: source, external: 'absolute'};
       }
       if (exclude && isExcluded(source)) {
         return null;

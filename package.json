@@ -1,6 +1,6 @@
 {
   "name": "rollup-plugin-import-maps",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "A plugin to resolve ECMAScript module bare/url import specifiers at build-time",
   "keywords": [
     "rollup-plugin",

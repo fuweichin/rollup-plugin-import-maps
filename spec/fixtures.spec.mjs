@@ -38,6 +38,23 @@ describe('TransformImportMaps', () => {
     let expectedOutputCode = await readFileAsync(expectedOutputFile, {encoding: 'utf-8'});
     expect(output.code).toEqual(expectedOutputCode);
   });
+  it('pathname-specifier', async () => {
+    let {inputFile, importmapFile, expectedOutputFile, pluginOptions} = (await import('./fixtures/pathname-specifier.js')).default;
+    let bundle = await rollup({
+      input: inputFile,
+      treeshake: false,
+      plugins: [
+        importMapsPlugin({
+          srcText: await readFileAsync(importmapFile, {encoding: 'utf-8'}),
+          ...pluginOptions,
+        })
+      ],
+    });
+    let result = await bundle.generate({format: 'es'});
+    let output = result.output[0];
+    let expectedOutputCode = await readFileAsync(expectedOutputFile, {encoding: 'utf-8'});
+    expect(output.code).toEqual(expectedOutputCode);
+  });
   it('specifier-excluding', async () => {
     let {inputFile, importmapFile, expectedOutputFile, pluginOptions} = (await import('./fixtures/specifier-excluding.js')).default;
     let bundle = await rollup({
